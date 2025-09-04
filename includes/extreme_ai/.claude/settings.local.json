@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Read(/home/deano/Projects/evo/admin/**)"
-    ],
-    "deny": [],
-    "ask": []
-  }
-}

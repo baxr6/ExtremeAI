@@ -20,18 +20,21 @@ ExtremeAI is a comprehensive AI management and integration system for Evolution 
 │       ├── classes/
 │       │   ├── ExtremeAI_Core_Clean.php   # Primary system engine
 │       │   ├── ExtremeAI_Database.php     # Database migration manager
-│       │   └── ExtremeAI_Providers_Clean.php # AI provider implementations
+│       │   ├── ExtremeAI_Providers_Clean.php # AI provider implementations
+│       │   └── ExtremeAI_Search.php       # AI-powered search engine
 │       ├── css/
 │       │   ├── extreme_ai_clean.css       # Main stylesheet
 │       │   ├── extreme-ai-components.css  # UI components
-│       │   └── test-console.css           # Test console styles
+│       │   ├── test-console.css           # Test console styles
+│       │   └── ai-search.css              # AI search interface styles
 │       ├── js/
 │       │   ├── dashboard.js               # Dashboard functionality
 │       │   ├── extreme-ai-core.js         # Core JavaScript library
 │       │   ├── installer.js               # Installation wizard
 │       │   ├── providers.js               # Provider management
 │       │   ├── settings.js                # Settings interface
-│       │   └── test-console.js            # AI testing console
+│       │   ├── test-console.js            # AI testing console
+│       │   └── ai-search.js               # AI search functionality
 │       ├── language/
 │       │   └── lang-english.php           # Language constants
 │       └── templates/
@@ -40,7 +43,10 @@ ExtremeAI is a comprehensive AI management and integration system for Evolution 
 │               ├── providers.php          # Provider configuration
 │               ├── settings.php           # System settings
 │               ├── styles.php             # CSS styles
-│               └── test_console.php       # Test console template
+│               ├── test_console.php       # Test console template
+│               └── ai_search.php          # AI search interface template
+├── blocks/
+│   └── block-extreme_ai_search.php      # Frontend search block
 ├── install.php                           # Complete installation system
 ├── upgrade.php                           # Database upgrade manager
 ├── README_INSTALLATION.md               # Installation documentation
@@ -146,6 +152,40 @@ class ExtremeAI_WorkflowEngine
 - loadWorkflows()
 ```
 
+### **ExtremeAI_Search (AI-Powered Search Engine)**
+**File**: `/includes/extreme_ai/classes/ExtremeAI_Search.php`
+
+#### **Core Search Methods**
+- `search($query, $options)` - Main search function with AI query expansion
+- `expandQuery($query)` - AI-powered query expansion with synonyms and context
+- `searchContentType($type, $original_query, $expanded_query, $options)` - Content-specific search
+- `scoreResults($results, $query, $options)` - Intelligent result ranking and scoring
+- `getSearchSuggestions($partial_query, $limit)` - AI-generated search suggestions
+
+#### **Content Search Methods**
+- `searchStories($original_query, $expanded_query, $options)` - Search news/articles in nuke_stories
+- `searchForumPosts($original_query, $expanded_query, $options)` - Search forum posts
+- `searchPages($original_query, $expanded_query, $options)` - Search static pages
+
+#### **Search Features**
+- **AI Query Expansion**: Uses AI to expand searches with synonyms and related terms
+- **Multi-Content Search**: Searches across news, forums, and pages simultaneously
+- **Intelligent Scoring**: Combines relevance, recency, and popularity for ranking
+- **Real-time Suggestions**: AI-powered search suggestions as users type
+- **Caching System**: Query expansion results cached for performance
+- **Fallback Support**: Graceful degradation when AI services are unavailable
+
+#### **Search Options**
+```php
+$options = [
+    'content_types' => ['stories', 'forum_posts', 'pages'],
+    'limit' => 20,
+    'expand_query' => true,
+    'boost_recent' => true,
+    'min_score' => 0.1
+];
+```
+
 ---
 
 ## **Admin Module System**
@@ -170,7 +210,7 @@ class ExtremeAI_WorkflowEngine
 
 #### **AJAX Handler**
 - `extreme_ai_handle_ajax()`: Main AJAX request router
-  - Handles actions: `get_stats`, `test_provider`, `get_analytics`, `get_chart_data`, `run_test`
+  - Handles actions: `get_stats`, `test_provider`, `get_analytics`, `get_chart_data`, `run_test`, `ai_search`, `search_suggestions`
   - Includes CSRF protection for data-modifying operations
   - Supports read-only actions without CSRF requirement
 
@@ -180,6 +220,7 @@ class ExtremeAI_WorkflowEngine
 - `extreme_ai_settings_page()`: System settings page
 - `extreme_ai_analytics_page()`: Analytics and reporting page
 - `extreme_ai_test_console_page()`: Interactive testing console
+- `extreme_ai_search_page()`: AI-powered search interface
 - `extreme_ai_workflows_page()`: Workflow management page
 - `extreme_ai_agents_page()`: AI agent management page
 
@@ -247,6 +288,17 @@ Integration with Evolution CMS admin menu system
 - Result display: `displayTestResult(result, responseTime, testData)`
 - Test history management and sample prompt library
 
+### **AI Search (`js/ai-search.js`)**
+
+#### **ExtremeAI_Search Class**
+- Real-time search with AI query expansion
+- Search execution: `performSearch()`, `expandQuery()`
+- Autocomplete suggestions: `getSuggestions()`, `displaySuggestions()`
+- Result rendering: `displayResults()`, `renderResultItem()`
+- Search history management: `addToSearchHistory()`, `loadSearchHistory()`
+- Keyboard navigation for suggestions
+- Advanced search options and filters
+
 ### **Installation Wizard (`js/installer.js`)**
 
 #### **ExtremeAI_Installer Class**
@@ -292,6 +344,22 @@ Integration with Evolution CMS admin menu system
 - Real-time output display with metrics
 - Test history and sample prompts
 - Responsive grid layout
+
+### **AI Search Template (`templates/admin/ai_search.php`)**
+
+#### **Template Variables**
+- `$admin_file`: Admin file path for AJAX requests
+- `$csrf_token`: Security token for form security
+
+#### **Features**
+- **Smart Search Interface**: Modern search input with AI-powered suggestions
+- **Content Type Filters**: Search across news, forums, and pages
+- **Advanced Options**: AI expansion toggle, recent content boost
+- **Real-time Suggestions**: Dropdown suggestions as users type
+- **Results Display**: Formatted results with relevance scoring
+- **Search History**: Local storage of recent searches
+- **Loading States**: Animated loading with progress steps
+- **Responsive Design**: Mobile-friendly interface
 
 ### **Styles Template (`templates/admin/styles.php`)**
 - Dynamic CSS generation
@@ -444,6 +512,63 @@ Execute AI provider test
         "response_time": 1.23,
         "cost_estimate": "$0.0012"
     }
+}
+```
+
+#### **ai_search**
+Execute AI-powered content search
+
+**Parameters:**
+- `ajax_action`: "ai_search"
+- `query`: Search query (required)
+- `content_types[]`: Array of content types to search
+- `limit`: Number of results to return
+- `expand_query`: Boolean for AI query expansion
+- `boost_recent`: Boolean for recent content boosting
+- `csrf_token`: Security token
+
+**Response:**
+```json
+{
+    "success": true,
+    "results": [
+        {
+            "id": "123",
+            "type": "story",
+            "title": "Article Title",
+            "content": "Content snippet...",
+            "url": "modules.php?name=News&file=article&sid=123",
+            "date": 1640995200,
+            "author": "Admin",
+            "category": "News",
+            "views": 150,
+            "final_score": 85.5
+        }
+    ],
+    "total_found": 25,
+    "original_query": "AI technology",
+    "expanded_query": "AI technology artificial intelligence machine learning",
+    "response_time": 0.234
+}
+```
+
+#### **search_suggestions**
+Get AI-powered search suggestions
+
+**Parameters:**
+- `ajax_action`: "search_suggestions"
+- `q`: Partial query (minimum 2 characters)
+- `limit`: Number of suggestions (default 5)
+
+**Response:**
+```json
+{
+    "success": true,
+    "suggestions": [
+        "AI technology trends",
+        "AI technology applications",
+        "AI technology future"
+    ]
 }
 ```
 

@@ -67,6 +67,7 @@ if (file_exists(NUKE_INCLUDE_DIR . 'extreme_ai/language/lang-' . $currentlang . 
 
 // Include core classes - CLEANED VERSION
 require_once NUKE_INCLUDE_DIR . 'extreme_ai/classes/ExtremeAI_Core_Clean.php';
+require_once NUKE_INCLUDE_DIR . 'extreme_ai/classes/ExtremeAI_Search.php';
 
 /** ------------------------------------------------------------------
  * CSRF and Security helpers
@@ -298,6 +299,81 @@ function extreme_ai_handle_ajax() {
             extreme_ai_json_response(extreme_ai_get_chart_data($type));
             break;
             
+        case 'ai_search':
+            // AI-powered search
+            error_log("ExtremeAI Search: Starting AI search");
+            
+            header('Content-Type: application/json');
+            
+            $query = $_POST['query'] ?? $_GET['query'] ?? '';
+            $content_types = $_POST['content_types'] ?? ['stories', 'forum_posts', 'pages'];
+            $limit = (int)($_POST['limit'] ?? 20);
+            $expand_query = isset($_POST['expand_query']) ? (bool)$_POST['expand_query'] : true;
+            
+            if (empty($query)) {
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Search query is required'
+                ]);
+                exit;
+            }
+            
+            try {
+                $search = new ExtremeAI_Search();
+                $results = $search->search($query, [
+                    'content_types' => $content_types,
+                    'limit' => $limit,
+                    'expand_query' => $expand_query,
+                    'boost_recent' => true
+                ]);
+                
+                error_log("ExtremeAI Search: Found " . count($results['results']) . " results for query: '$query'");
+                echo json_encode($results);
+                
+            } catch (Exception $e) {
+                error_log("ExtremeAI Search Error: " . $e->getMessage());
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Search failed: ' . $e->getMessage()
+                ]);
+            }
+            exit;
+            break;
+            
+        case 'search_suggestions':
+            // Get AI-powered search suggestions
+            header('Content-Type: application/json');
+            
+            $partial_query = $_GET['q'] ?? '';
+            $limit = (int)($_GET['limit'] ?? 5);
+            
+            if (empty($partial_query) || strlen($partial_query) < 2) {
+                echo json_encode([
+                    'success' => true,
+                    'suggestions' => []
+                ]);
+                exit;
+            }
+            
+            try {
+                $search = new ExtremeAI_Search();
+                $suggestions = $search->getSearchSuggestions($partial_query, $limit);
+                
+                echo json_encode([
+                    'success' => true,
+                    'suggestions' => $suggestions
+                ]);
+                
+            } catch (Exception $e) {
+                error_log("ExtremeAI Search Suggestions Error: " . $e->getMessage());
+                echo json_encode([
+                    'success' => true,
+                    'suggestions' => []
+                ]);
+            }
+            exit;
+            break;
+        
         case 'run_test':
             // Debug logging
             error_log("ExtremeAI Test Console: Starting test");
@@ -980,6 +1056,7 @@ function extreme_ai_admin_menu() {
         'extremeai_providers' => 'AI Providers',
         'extremeai_settings' => 'Settings',
         'extremeai_test_console' => 'Test Console',
+        'extremeai_search' => 'AI Search',
         'extremeai_analytics' => 'Analytics',
         'extremeai_workflows' => 'Workflows',
         'extremeai_agents' => 'AI Agents'
@@ -1460,5 +1537,45 @@ switch($op) {
     case "extremeai_agents":
         extreme_ai_agents_page();
         break;
+        
+    case "extremeai_search":
+        // Check for AJAX requests first
+        if (isset($_GET['ajax_action']) || isset($_POST['ajax_action'])) {
+            error_log("ExtremeAI Search: AJAX request detected in search operation");
+            extreme_ai_handle_ajax();
+            exit;
+        }
+        extreme_ai_search_page();
+        break;
+}
+
+/**
+ * AI-Powered Search Page
+ */
+function extreme_ai_search_page() {
+    global $admin_file;
+    
+    extreme_ai_include_assets();
+    
+    // Include search-specific CSS and JS
+    evo_include_style(
+        'extreme_ai-search-css',
+        'includes/extreme_ai/css/ai-search.css',
+        time()
+    );
+    
+    evo_include_script(
+        'extreme_ai-search-js',
+        'includes/extreme_ai/js/ai-search.js',
+        time(),
+        true // Load in footer
+    );
+    
+    $data = [
+        'admin_file' => $admin_file,
+        'csrf_token' => extreme_ai_get_csrf()
+    ];
+    
+    extreme_ai_load_template('ai_search', $data);
 }
 ?>
